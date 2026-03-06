@@ -1729,7 +1729,6 @@ export const Settings: React.FC<SettingsProps> = ({ role, language }) => {
                                 {isRTL ? 'العطلات الوطنية' : 'National Holidays'}
                               </h5>
                               <Button
-                                
                                 variant="secondary"
                                 onClick={handleSyncHolidays}
                                 disabled={isSyncingHolidays}
@@ -1769,7 +1768,7 @@ export const Settings: React.FC<SettingsProps> = ({ role, language }) => {
                                 {isRTL ? 'فعاليات المدرسة' : 'School-Specific Events'}
                               </h5>
                               <Button
-                                
+                                size="sm"
                                 variant="secondary"
                                 className="h-8 text-[10px] gap-1"
                                 onClick={handleAddEvent}
@@ -3301,7 +3300,7 @@ export const Settings: React.FC<SettingsProps> = ({ role, language }) => {
                             </h5>
                             <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 space-y-3">
                               <p className="text-[10px] text-gray-500 italic">{isRTL ? 'سجل غير قابل للتعديل يظهر كل تغيير قام به المسؤولون.' : 'A non-editable log showing every change made by admins.'}</p>
-                              <Button variant="secondary"  className="w-full text-[10px] font-bold uppercase tracking-wider">
+                              <Button variant="secondary" size="sm" className="w-full text-[10px] font-bold uppercase tracking-wider">
                                 <Download size={12} className="mr-2" /> {isRTL ? 'تصدير سجل التدقيق' : 'Export Audit Log'}
                               </Button>
                             </div>
