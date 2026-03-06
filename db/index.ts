@@ -4,7 +4,14 @@ import * as schema from './schema';
 
 // For browser persistence, use idb:// prefix
 // For Node.js persistence, use a file path
-const client = new PGlite('idb://faheem-school-db-v5');
+let client: PGlite;
+try {
+	client = new PGlite('idb://faheem-school-db-v5');
+} catch (e) {
+	console.error("Failed to initialize PGLite client:", e);
+	// Fallback to in-memory if IndexedDB fails (e.g. Incognito or Node environment)
+	client = new PGlite();
+}
 
 export const db = drizzle(client, { schema });
 

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { MOCK_TEACHERS, MOCK_ADMINS, CLASSES } from '../services/mockData';
+import { MOCK_ADMINS, CLASSES } from '../services/mockData';
 import { Language, Student, Teacher, Admin, UserRole } from '../types';
 import { StudentProfile } from './StudentProfile';
 import { Button } from '../components/Button';
 import { useStudents } from '../hooks/useStudents';
+import { useTeachers } from '../hooks/useTeachers';
 import {
    Search,
    Plus,
@@ -81,11 +82,12 @@ export const UserManagement: React.FC<UserManagementProps> = ({ language, role }
    const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
    // Data State
-   const { students: dbStudents, loading, refresh, addStudent } = useStudents();
-   const [teachersList, setTeachersList] = useState<Teacher[]>(MOCK_TEACHERS);
+   const { students: dbStudents, loading: studentsLoading, refresh: refreshStudents, addStudent } = useStudents();
+   const { teachers: dbTeachers, loading: teachersLoading, refresh: refreshTeachers, addTeacher } = useTeachers();
    const [adminsList, setAdminsList] = useState<Admin[]>(MOCK_ADMINS);
 
    const studentsList = dbStudents;
+   const teachersList = dbTeachers;
 
    // Modal States
    const [uploadModalType, setUploadModalType] = useState<'student' | 'teacher' | null>(null);
@@ -151,23 +153,22 @@ export const UserManagement: React.FC<UserManagementProps> = ({ language, role }
       }
    };
 
-   const handleCreateTeacher = () => {
-      const teacher: Teacher = {
-         id: `t-${Date.now()}`,
-         name: newTeacher.name || 'New Teacher',
-         role: UserRole.TEACHER,
-         avatar: `https://ui-avatars.com/api/?name=${newTeacher.name}&background=random`,
-         email: newTeacher.email,
-         specialization: newTeacher.subject,
-         hiringDate: newTeacher.hiringDate,
-         employmentType: newTeacher.type as any,
-         phone: '',
-         assignedClasses: [],
-         academicLoad: 0
-      };
-      setTeachersList([teacher, ...teachersList]);
-      setIsAddTeacherOpen(false);
-      setNewTeacher({ name: '', email: '', hiringDate: new Date().toISOString().split('T')[0], type: 'Full-time', subject: 'Mathematics' });
+   const handleCreateTeacher = async () => {
+      try {
+         await addTeacher({
+            name: newTeacher.name || 'New Teacher',
+            email: newTeacher.email,
+            hiringDate: newTeacher.hiringDate,
+            employmentType: newTeacher.type as any,
+            specialization: newTeacher.subject,
+            phone: ''
+         });
+         setIsAddTeacherOpen(false);
+         setNewTeacher({ name: '', email: '', hiringDate: new Date().toISOString().split('T')[0], type: 'Full-time', subject: 'Mathematics' });
+      } catch (error) {
+         console.error('Failed to create teacher:', error);
+         alert('Failed to create teacher. Please check the console for details.');
+      }
    };
 
    const handleCreateAdmin = () => {
@@ -227,7 +228,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ language, role }
                      </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                     {loading ? (
+                     {studentsLoading ? (
                         <tr>
                            <td colSpan={6} className="px-8 py-20 text-center">
                               <div className="flex flex-col items-center gap-3 text-center">
@@ -286,10 +287,10 @@ export const UserManagement: React.FC<UserManagementProps> = ({ language, role }
                               </td>
                               <td className="px-6 py-5">
                                  <span className={`px-3 py-1 rounded-full text-xs font-bold border ${student.status === 'Active'
-                                       ? 'bg-green-50 text-green-700 border-green-100'
-                                       : student.status === 'At Risk'
-                                          ? 'bg-red-50 text-red-700 border-red-100'
-                                          : 'bg-gray-50 text-gray-600 border-gray-100'
+                                    ? 'bg-green-50 text-green-700 border-green-100'
+                                    : student.status === 'At Risk'
+                                       ? 'bg-red-50 text-red-700 border-red-100'
+                                       : 'bg-gray-50 text-gray-600 border-gray-100'
                                     }`}>
                                     {student.status}
                                  </span>
@@ -328,68 +329,92 @@ export const UserManagement: React.FC<UserManagementProps> = ({ language, role }
          </div>
 
          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            {teachersList.map(teacher => {
-               const assignedClassDetails = CLASSES.filter(c => teacher.assignedClasses.includes(c.id));
+            {teachersLoading ? (
+               <div className="col-span-full py-20 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                     <div className="w-8 h-8 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
+                     <p className="text-gray-500 font-medium">Loading faculty directory...</p>
+                  </div>
+               </div>
+            ) : teachersList.length === 0 ? (
+               <div className="col-span-full py-20 text-center bg-white rounded-3xl border border-dashed border-gray-200">
+                  <div className="flex flex-col items-center gap-4">
+                     <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-300">
+                        <Users size={32} />
+                     </div>
+                     <div className="max-w-xs">
+                        <p className="font-bold text-gray-900 text-lg">No teachers added</p>
+                        <p className="text-gray-500 text-sm mt-1">Start building your school faculty by adding your first teacher.</p>
+                     </div>
+                     <Button variant="primary" onClick={() => setIsAddTeacherOpen(true)} className="mt-2">
+                        <Plus size={18} /> Add First Teacher
+                     </Button>
+                  </div>
+               </div>
+            ) : (
+               teachersList.map(teacher => {
+                  const assignedClassDetails = CLASSES.filter(c => (teacher.assignedClasses || []).includes(c.id));
 
-               return (
-                  <div key={teacher.id} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 hover:shadow-md transition-all">
-                     <div className="flex justify-between items-start mb-6">
-                        <div className="flex gap-4">
-                           <img src={teacher.avatar} alt={teacher.name} className="w-16 h-16 rounded-2xl object-cover border-2 border-white shadow-sm" />
-                           <div>
-                              <h3 className="font-bold text-lg text-gray-900">{teacher.name}</h3>
-                              <p className="text-blue-600 font-medium text-sm">{teacher.specialization}</p>
-                              <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                                 <span className="flex items-center gap-1"><Mail size={12} /> {teacher.email}</span>
-                                 <span className="flex items-center gap-1"><Phone size={12} /> {teacher.phone || 'N/A'}</span>
+                  return (
+                     <div key={teacher.id} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 hover:shadow-md transition-all">
+                        <div className="flex justify-between items-start mb-6">
+                           <div className="flex gap-4">
+                              <img src={teacher.avatar} alt={teacher.name} className="w-16 h-16 rounded-2xl object-cover border-2 border-white shadow-sm" />
+                              <div>
+                                 <h3 className="font-bold text-lg text-gray-900">{teacher.name}</h3>
+                                 <p className="text-blue-600 font-medium text-sm">{teacher.specialization}</p>
+                                 <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                                    <span className="flex items-center gap-1"><Mail size={12} /> {teacher.email}</span>
+                                    <span className="flex items-center gap-1"><Phone size={12} /> {teacher.phone || 'N/A'}</span>
+                                 </div>
                               </div>
                            </div>
+                           <button className="text-gray-300 hover:text-gray-600"><MoreVertical size={20} /></button>
                         </div>
-                        <button className="text-gray-300 hover:text-gray-600"><MoreVertical size={20} /></button>
-                     </div>
 
-                     <div className="grid grid-cols-2 gap-4 mb-6">
-                        <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-                           <p className="text-xs text-gray-500 mb-1">Hired Date</p>
-                           <p className="font-bold text-gray-900 flex items-center gap-2"><Calendar size={14} /> {teacher.hiringDate}</p>
+                        <div className="grid grid-cols-2 gap-4 mb-6">
+                           <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                              <p className="text-xs text-gray-500 mb-1">Hired Date</p>
+                              <p className="font-bold text-gray-900 flex items-center gap-2"><Calendar size={14} /> {teacher.hiringDate}</p>
+                           </div>
+                           <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                              <p className="text-xs text-gray-500 mb-1">Employment</p>
+                              <p className="font-bold text-gray-900 flex items-center gap-2"><Briefcase size={14} /> {teacher.employmentType}</p>
+                           </div>
                         </div>
-                        <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-                           <p className="text-xs text-gray-500 mb-1">Employment</p>
-                           <p className="font-bold text-gray-900 flex items-center gap-2"><Briefcase size={14} /> {teacher.employmentType}</p>
-                        </div>
-                     </div>
 
-                     <div className="border-t border-gray-100 pt-4">
-                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Subject Distribution</h4>
-                        <table className="w-full text-sm">
-                           <thead>
-                              <tr className="text-gray-400 text-xs text-left">
-                                 <th className="pb-2 font-medium">Class</th>
-                                 <th className="pb-2 font-medium">Subject</th>
-                                 <th className="pb-2 font-medium text-right">Hrs/Week</th>
-                              </tr>
-                           </thead>
-                           <tbody className="divide-y divide-gray-50">
-                              {assignedClassDetails.map((cls, idx) => (
-                                 <tr key={idx}>
-                                    <td className="py-2 font-bold text-gray-800">{cls.name} <span className="text-gray-400 font-normal text-xs ml-1">({cls.gradeLevel})</span></td>
-                                    <td className="py-2 text-gray-600">{teacher.specialization}</td>
-                                    <td className="py-2 text-right font-mono font-medium">4</td>
+                        <div className="border-t border-gray-100 pt-4">
+                           <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Subject Distribution</h4>
+                           <table className="w-full text-sm">
+                              <thead>
+                                 <tr className="text-gray-400 text-xs text-left">
+                                    <th className="pb-2 font-medium">Class</th>
+                                    <th className="pb-2 font-medium">Subject</th>
+                                    <th className="pb-2 font-medium text-right">Hrs/Week</th>
                                  </tr>
-                              ))}
-                              {assignedClassDetails.length === 0 && (
-                                 <tr><td colSpan={3} className="py-2 text-center text-gray-400 italic">No classes assigned</td></tr>
-                              )}
-                           </tbody>
-                        </table>
-                        <div className="mt-4 flex justify-between items-center text-xs">
-                           <span className="text-gray-500">Total Academic Load</span>
-                           <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded font-bold">{teacher.academicLoad} Hours / Week</span>
+                              </thead>
+                              <tbody className="divide-y divide-gray-50">
+                                 {assignedClassDetails.map((cls, idx) => (
+                                    <tr key={idx}>
+                                       <td className="py-2 font-bold text-gray-800">{cls.name} <span className="text-gray-400 font-normal text-xs ml-1">({cls.gradeLevel})</span></td>
+                                       <td className="py-2 text-gray-600">{teacher.specialization}</td>
+                                       <td className="py-2 text-right font-mono font-medium">4</td>
+                                    </tr>
+                                 ))}
+                                 {assignedClassDetails.length === 0 && (
+                                    <tr><td colSpan={3} className="py-2 text-center text-gray-400 italic">No classes assigned</td></tr>
+                                 )}
+                              </tbody>
+                           </table>
+                           <div className="mt-4 flex justify-between items-center text-xs">
+                              <span className="text-gray-500">Total Academic Load</span>
+                              <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded font-bold">{teacher.academicLoad} Hours / Week</span>
+                           </div>
                         </div>
                      </div>
-                  </div>
-               );
-            })}
+                  );
+               })
+            )}
          </div>
       </div>
    );
