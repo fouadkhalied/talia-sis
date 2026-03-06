@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { initDb } from './db';
 import { UserRole, Language, User, NavItem } from './types';
 import { Header } from './components/Header';
 import { Dashboard } from './views/Dashboard';
@@ -8,13 +9,13 @@ import { Curriculum } from './views/Curriculum';
 import { Gradebook } from './views/Gradebook';
 import { ClassManagement } from './views/ClassManagement';
 import { Analytics } from './views/Analytics';
-import { 
-  LayoutDashboard, 
-  BookOpen, 
-  GraduationCap, 
-  LibraryBig, 
-  BarChart3, 
-  Settings, 
+import {
+  LayoutDashboard,
+  BookOpen,
+  GraduationCap,
+  LibraryBig,
+  BarChart3,
+  Settings,
   School,
   Activity,
   Menu,
@@ -27,7 +28,12 @@ const App: React.FC = () => {
   const [language, setLanguage] = useState<Language>(Language.EN);
   const [activeView, setActiveView] = useState('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  
+  const [dbReady, setDbReady] = useState(false);
+
+  useEffect(() => {
+    initDb().then(() => setDbReady(true));
+  }, []);
+
   // Mock User State
   const [user, setUser] = useState<User>({
     id: 'u1',
@@ -89,12 +95,22 @@ const App: React.FC = () => {
     }
   };
 
+  if (!dbReady) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-8 text-center">
+        <div className="w-16 h-16 border-4 border-primary-100 border-t-primary-600 rounded-full animate-spin mb-6"></div>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Initializing System</h1>
+        <p className="text-gray-500 max-w-sm">Setting up your secure local database. This only takes a moment...</p>
+      </div>
+    );
+  }
+
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} className="min-h-screen bg-[#fdfdfd] flex text-gray-900 font-sans relative">
-      
+
       {/* Mobile Menu Toggle */}
       <div className={`lg:hidden fixed top-0 ${isRTL ? 'right-0' : 'left-0'} z-50 p-4`}>
-        <button 
+        <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           className="p-2 bg-white rounded-full shadow-md text-gray-700 hover:bg-gray-100 transition-colors"
         >
@@ -128,11 +144,10 @@ const App: React.FC = () => {
                   setActiveView(item.view);
                   setIsMobileMenuOpen(false);
                 }}
-                className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-full text-sm font-bold transition-all duration-200 ${
-                  isActive 
-                    ? 'bg-primary-100 text-primary-800' 
-                    : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
-                }`}
+                className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-full text-sm font-bold transition-all duration-200 ${isActive
+                  ? 'bg-primary-100 text-primary-800'
+                  : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
+                  }`}
               >
                 {item.icon}
                 <span>{isRTL ? item.labelAr : item.labelEn}</span>
@@ -143,31 +158,31 @@ const App: React.FC = () => {
 
         <div className="p-6">
           <div className="bg-primary-50 rounded-3xl p-5 border border-primary-100">
-             <div className="flex items-center gap-2 text-primary-700 mb-2">
-                <Activity size={16} className="animate-pulse" />
-                <span className="text-xs font-bold uppercase tracking-wider">System Live</span>
-             </div>
-             <p className="text-xs text-primary-600 font-medium">v2.4.0 • Gemini 3.0 Integrated</p>
+            <div className="flex items-center gap-2 text-primary-700 mb-2">
+              <Activity size={16} className="animate-pulse" />
+              <span className="text-xs font-bold uppercase tracking-wider">System Live</span>
+            </div>
+            <p className="text-xs text-primary-600 font-medium">v2.4.0 • Gemini 3.0 Integrated</p>
           </div>
         </div>
       </aside>
 
       {/* Main Content Wrapper */}
       <div className={`flex-1 flex flex-col min-h-screen transition-all w-full lg:w-auto ${isRTL ? 'lg:mr-[280px]' : 'lg:ml-[280px]'}`}>
-        <Header 
-          user={user} 
-          language={language} 
+        <Header
+          user={user}
+          language={language}
           toggleLanguage={toggleLanguage}
           toggleRole={toggleRole}
         />
-        
+
         <main className="flex-1 p-4 md:p-8 overflow-y-auto">
           <div className="max-w-7xl mx-auto h-full">
             {renderContent()}
           </div>
         </main>
       </div>
-      
+
     </div>
   );
 };
