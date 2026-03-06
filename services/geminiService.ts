@@ -1,7 +1,18 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { LessonPlan, Holiday, Course, TimetableEvent, Language } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const getApiKey = () => {
+  // Check both VITE_ prefix and process.env (for Vite define fallback)
+  return (import.meta as any).env?.VITE_GEMINI_API_KEY || (process as any).env?.GEMINI_API_KEY || (process as any).env?.API_KEY;
+};
+
+const apiKey = getApiKey();
+if (!apiKey) {
+  console.warn("Gemini API Key is not set. AI features will be disabled.");
+}
+
+const ai = apiKey ? new GoogleGenAI(apiKey) : null;
+
 
 export const generateSmartTimetable = async (
   startDate: string,

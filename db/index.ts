@@ -11,7 +11,7 @@ try {
         //     had subject_teachers created WITH an `id` column.  Any time the
         //     DDL changes in a breaking way (column added/removed, type changed)
         //     increment this suffix so the browser starts with a clean slate.
-        client = new PGlite('idb://faheem-school-db-v5');
+        client = new PGlite('idb://faheem-school-db-v6');
     } else {
         client = new PGlite();
     }
